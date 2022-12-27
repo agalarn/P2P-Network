@@ -21,7 +21,8 @@ while True:
     print("2. Obtener la lista de archivos disponibles")
     print("3. Descargar un fichero")
     print("4. Consultar los usuarios conectados")
-    print("5. Desconectarse del servidor")
+    print("5. Consultar el espacio disponible en el servidor")
+    print("6. Desconectarse del servidor")
 
     # Leemos la opción seleccionada por el usuario
     option = input()
@@ -36,6 +37,9 @@ while True:
 
         # Enviamos el mensaje al servidor
         client_socket.send(message.encode())
+        print(client_socket.recv(BUFFER_SIZE).decode())
+
+
 
     # Si la opción es "2", significa que el usuario quiere obtener la lista de archivos disponibles
     elif option == "2":
@@ -44,7 +48,8 @@ while True:
 
         # Recibimos la respuesta del servidor (la lista de archivos disponibles)
         file_list = client_socket.recv(BUFFER_SIZE).decode()
-        print("Archivos disponibles:", file_list)
+        print(file_list)
+
 
     # Si el usuario elige la opción "3", significa que quiere descargar un archivo
     elif option == "3":
@@ -78,12 +83,12 @@ while True:
             print("El archivo no se encuentra disponible en el servidor")
 
     # Si la opción es "5", significa que el usuario quiere desconectarse
-    elif option == "5":
+    elif option == "6":
         # Enviamos el mensaje "DISCONNECT" al servidor
         client_socket.send("DISCONNECT".encode())
         break
 
-    elif option == "6":
+    elif option == "4":
         # Enviamos un mensaje al servidor pidiendo la lista de clientes y su estado de conexión
         client_socket.send("REQUEST_CLIENTS_STATUS".encode())
 
@@ -95,7 +100,7 @@ while True:
         for usuario in usuarios:
             print(usuario)
 
-    elif option == "7":
+    elif option == "5":
         client_socket.send("REQUEST_STORAGE_INFO".encode())
 
         storage_info_message = client_socket.recv(BUFFER_SIZE).decode()

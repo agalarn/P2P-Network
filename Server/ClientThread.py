@@ -38,30 +38,40 @@ class ClientThread(threading.Thread):
                 # Extraemos el nombre del archivo del mensaje
                 file_path = message[6:]
 
-                # Creamos la carpeta "shared_files" si no existe
-                os.makedirs("shared_files", exist_ok=True)
+                if os.path.isfile(file_path):
 
-                # Obtenemos el nombre del archivo
-                file_name = os.path.basename(file_path)
+                    # Creamos la carpeta "shared_files" si no existe
+                    os.makedirs("shared_files", exist_ok=True)
 
-                # Construimos la ruta del archivo en la carpeta "shared_files"
-                file_path_in_server = os.path.join("shared_files", file_name)
+                    # Obtenemos el nombre del archivo
+                    file_name = os.path.basename(file_path)
 
-                # Abrimos el archivo en modo binario para poder leer su contenido
-                with open(file_path, "rb") as file_to_send:
-                    # Abrimos el archivo en la carpeta "shared_files" en modo escritura binaria para guardar su contenido
-                    with open(file_path_in_server, "wb") as file_in_server:
-                        # Leemos el contenido del archivo en bloques y lo escribimos en el archivo del servidor
-                        chunk = file_to_send.read(BUFFER_SIZE)
-                        while chunk:
-                            file_in_server.write(chunk)
+                    # Construimos la ruta del archivo en la carpeta "shared_files"
+                    file_path_in_server = os.path.join("shared_files", file_name)
+
+                    # Abrimos el archivo en modo binario para poder leer su contenido
+                    with open(file_path, "rb") as file_to_send:
+                        # Abrimos el archivo en la carpeta "shared_files" en modo escritura binaria para guardar su contenido
+                        with open(file_path_in_server, "wb") as file_in_server:
+                            # Leemos el contenido del archivo en bloques y lo escribimos en el archivo del servidor
                             chunk = file_to_send.read(BUFFER_SIZE)
+                            while chunk:
+                                file_in_server.write(chunk)
+                                chunk = file_to_send.read(BUFFER_SIZE)
+
+                    self.client_socket.send(b"El fichero se ha compartido con el servidor correctamente.")
+
+                else:
+                    self.client_socket.send(b"Esa ruta no es valida para el archivo.")
 
 
             # Si el mensaje es "REQUEST_FILES", significa que el cliente quiere obtener la lista de archivos disponibles
             elif message == "REQUEST_FILES":
                  # Creamos un mensaje con la lista de archivos disponibles separados por comas
                 files_in_folder = os.listdir("shared_files")
+
+                if len(files_in_folder) == 0:
+                    self.client_socket.send("No hay archivos en el servidor".encode())
 
                 # Creamos un mensaje con la lista de archivos en la carpeta "shared_files" separados por comas
                 file_list = ",".join(files_in_folder)
