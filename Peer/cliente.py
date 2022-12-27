@@ -61,7 +61,8 @@ while True:
         selected_filename = files[selected_file-1]
         print(selected_filename)
         client_socket.send(("DOWNLOAD " + selected_filename).encode())
-        file_size = int(client_socket.recv(BUFFER_SIZE).decode())
+        file_size = client_socket.recv(BUFFER_SIZE).decode()
+        file_size = int(file_size)
 
         # Si el tamaño del archivo es mayor que 0, significa que el archivo existe y lo podemos descargar
         if file_size > 0:
