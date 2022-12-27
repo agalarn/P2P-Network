@@ -10,8 +10,9 @@ BUFFER_SIZE = 2048
 # Nos conectamos al servidor
 client_socket.connect(("localhost", 5001))
 
-# Enviamos un mensaje al servidor
-client_socket.send("HOLA SERVIDOR".encode())
+nombre = input("Introduce un nombre de usuario: ")
+
+client_socket.send(nombre.encode())
 
 while True:
     # Mostramos un menú de opciones al usuario
@@ -19,7 +20,8 @@ while True:
     print("1. Compartir un archivo")
     print("2. Obtener la lista de archivos disponibles")
     print("3. Descargar un fichero")
-    print("4. Desconectarse del servidor")
+    print("4. Consultar los usuarios conectados")
+    print("5. Desconectarse del servidor")
 
     # Leemos la opción seleccionada por el usuario
     option = input()
@@ -46,19 +48,25 @@ while True:
 
     # Si el usuario elige la opción "3", significa que quiere descargar un archivo
     elif option == "3":
-        # Pedimos al usuario que indique el nombre del archivo que quiere descargar
-        file_name = input("Indica el nombre del archivo que quieres descargar: ")
+        client_socket.send("REQUEST_DOWNLOAD".encode())
+        file_list = client_socket.recv(BUFFER_SIZE).decode()
+        files = file_list.split(",")
 
-        # Enviamos un mensaje al servidor solicitando el archivo
-        client_socket.send(("DOWNLOAD " + file_name).encode())
+        print("Selecciona el archivo que deseas descargar:")
+        for i, file in enumerate(files):
+            print(f"{i+1}. {file}")
 
-        # Recibimos el tamaño del archivo
+        selected_file = input()
+        selected_file = int(selected_file)
+        selected_filename = files[selected_file-1]
+        print(selected_filename)
+        client_socket.send(("DOWNLOAD " + selected_filename).encode())
         file_size = int(client_socket.recv(BUFFER_SIZE).decode())
 
         # Si el tamaño del archivo es mayor que 0, significa que el archivo existe y lo podemos descargar
         if file_size > 0:
             # Abrimos un archivo en modo escritura binaria para guardar el contenido del archivo descargado
-            with open(file_name, "wb") as file:
+            with open(selected_filename, "wb") as file:
                 # Recibimos el archivo en bloques y lo escribimos en el archivo que hemos abierto
                 while file_size > 0:
                     chunk = client_socket.recv(BUFFER_SIZE)
@@ -68,11 +76,30 @@ while True:
         else:
             print("El archivo no se encuentra disponible en el servidor")
 
-    # Si la opción es "4", significa que el usuario quiere desconectarse
-    elif option == "4":
-        # Enviamos el mensaje "DISCONECT" al servidor
-        client_socket.send("DISCONECT".encode())
+    # Si la opción es "5", significa que el usuario quiere desconectarse
+    elif option == "5":
+        # Enviamos el mensaje "DISCONNECT" al servidor
+        client_socket.send("DISCONNECT".encode())
         break
+
+    elif option == "6":
+        # Enviamos un mensaje al servidor pidiendo la lista de clientes y su estado de conexión
+        client_socket.send("REQUEST_CLIENTS_STATUS".encode())
+
+        # Recibimos la respuesta del servidor con la lista de clientes y su estado de conexión
+        usuarios = client_socket.recv(BUFFER_SIZE).decode()
+        usuarios = usuarios.split(",")
+        print("Los usuarios que están conectados actualmente son: ")
+        # Mostramos la lista de clientes y su estado de conexión en pantalla
+        for usuario in usuarios:
+            print(usuario)
+
+    elif option == "7":
+        client_socket.send("REQUEST_STORAGE_INFO".encode())
+
+        storage_info_message = client_socket.recv(BUFFER_SIZE).decode()
+        print(f"El tamaño disponible en el servidor es: {storage_info_message} GB")
+        
 
 
 # Recibimos una respuesta del servidor

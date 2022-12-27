@@ -1,12 +1,14 @@
 import threading
 import socket
 import os
+import psutil
 
 # Constante que define el tamaño del buffer de recepción de mensajes
 BUFFER_SIZE = 2048
 
-# Creamos una lista para almacenar los archivos disponibles en la red
-files = []
+# Diccionario para almacenar la información de los clientes conectados
+clients = {}
+
 
 class ClientThread(threading.Thread):
     """Clase encargada de atender a un cliente en un hilo separado"""
@@ -18,6 +20,10 @@ class ClientThread(threading.Thread):
 
     def run(self):
         """Método que se ejecutará en el hilo"""
+        nombre = self.client_socket.recv(BUFFER_SIZE).decode()
+        client_address = self.client_address
+        clients[client_address] = {"ip": client_address[0], "port": client_address[1], "status": "connected", "usuario": nombre}
+
         # Recibimos mensajes del cliente hasta que se desconecte
         while True:
             # Recibimos el mensaje del cliente
@@ -63,8 +69,20 @@ class ClientThread(threading.Thread):
                 # Enviamos la lista de archivos al cliente
                 self.client_socket.send(file_list.encode())
 
-            elif message == "DISCONECT":
+            elif message == "REQUEST_DOWNLOAD":
+                # Creamos un mensaje con la lista de archivos disponibles separados por comas
+                files_in_folder = os.listdir("shared_files")
+
+                # Creamos un mensaje con la lista de archivos en la carpeta "shared_files" separados por comas
+                file_list = ",".join(files_in_folder)
+
+                # Enviamos la lista de archivos al cliente
+                self.client_socket.send(file_list.encode())
+
+            elif message == "DISCONNECT":
+                clients[self.client_address] = {"ip": self.client_address, "port": self.client_address, "status": "disconnected"}
                 self.client_socket.close()
+                #clients[self.client_address] = (self.client_address, self.client_socket.getsockname()[1], "Desconectado")
                 print(f"Cliente desconectado: {self.client_address}")
                 break
 
@@ -93,6 +111,29 @@ class ClientThread(threading.Thread):
                 else:
                     # Enviamos un tamaño de archivo igual a 0 para indicar que el archivo no existe
                     self.client_socket.send(b"0")
+
+            elif message == "REQUEST_CLIENTS_STATUS":
+                connected_clients = []
+                for client in clients:
+                    if clients[client]["status"] == "connected":
+                        connected_clients.append(f"{clients[client]['usuario']} - {clients[client]['status']}")
+                clients_list = ",".join(connected_clients)
+
+                # Enviamos la lista de clientes conectados al cliente
+                self.client_socket.send(clients_list.encode())
+
+            elif message == "REQUEST_STORAGE_INFO":
+
+                # Obtenemos el objeto correspondiente al disco duro en el que se encuentra la carpeta "shared_files"
+                disk = psutil.disk_usage("shared_files")
+
+                # Calculamos el espacio disponible en GB
+                available_space_mb = disk.free / (1024 * 1024 * 1024)
+
+                available_space_mb = round(available_space_mb, 2)
+
+                # Mostramos el espacio disponible en pantalla
+                self.client_socket.send(str(available_space_mb).encode())
 
 
 
