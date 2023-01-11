@@ -5,10 +5,8 @@ from ClientThread import ClientThread
 # Creamos un socket para el servidor
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-# Asignamos una dirección y puerto al socket
-server_socket.bind(("0.0.0.0", 5001))
+server_socket.bind(("localhost", 5001))
 
-# Hacemos que el socket escuche conexiones entrantes
 server_socket.listen()
 
 print("Servidor iniciado, esperando conexiones...")
